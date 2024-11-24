@@ -81,28 +81,57 @@ class JugadorOrugasEquipo13(JugadorOrugas):
             raise TiroInvalido("No hay movimientos posibles") # si no hay movimientos posibles, lanzar excepción
     
         best_move = posibles[0]
-        # Inicializar el mejor valor con el peor valor posible osea negativo infinito
-        # usamos negativo infinito para asegurarnos de que cualquier valor heurístico sea mejor
         best_value = float('-inf')
         
         for movimiento in posibles:
             try:
-                #print(f"Evaluando movimiento: {movimiento}")  # Imprimir el movimiento que se está evaluando
                 if not self.es_tiro_valido(tablero, movimiento):
-                    #print(f"Movimiento inválido: {movimiento}")  # Imprimir si el movimiento es inválido
                     continue
                 # Simulate the move
                 tablero_simulado = self.simula_tiro(tablero, movimiento)
-                # Evaluate the move using the heuristic
-                # nuevamente, la heurística es muy simple
-                value = self.heuristic(tablero_simulado[1])
-                #print(f"Valor heurístico para {movimiento}: {value}")  # Imprimir el valor heurístico
+                # Evaluate the move using the minimax algorithm
+                value = self.minimax(tablero_simulado[1], 4, False)  # Depth is set to 3 for example
                 if value > best_value:
                     best_value = value
                     best_move = movimiento
             except TiroInvalido:
-                #print(f"Excepción TiroInvalido para el movimiento: {movimiento}")  # Imprimir si se lanza una excepción
                 continue
         
-        #print(f"Mejor movimiento seleccionado: {best_move} con valor heurístico: {best_value}")  # Imprimir el mejor movimiento seleccionado
         return best_move
+    
+    def terminal(self, tablero):
+        """
+        Checks if the game has reached a terminal state.
+        """
+        # Check if there are no valid moves for either player
+        if not self.posiciones_siguientes((self.simbolo, tablero)) and not self.posiciones_siguientes((self.contrario.simbolo, tablero)):
+            return True
+        return False
+
+    def minimax(self, tablero, depth, maximizing_player):
+        """
+        Minimax algorithm to determine the best move based on the current game board.
+        A player that is maximizing will try to maximize the heuristic value, 
+        while a player that is minimizing will try to minimize the heuristic value.
+        """
+        if depth == 0 or self.terminal(tablero):
+            return self.heuristic(tablero)
+        
+        if maximizing_player:
+            max_eval = float('-inf')
+            for movimiento in self.posiciones_siguientes((self.simbolo, tablero)):
+                if not self.es_tiro_valido(tablero, movimiento):
+                    continue
+                tablero_simulado = self.simula_tiro(tablero, movimiento)
+                eval = self.minimax(tablero_simulado[1], depth - 1, False)
+                max_eval = max(max_eval, eval)
+            return max_eval
+        else:
+            min_eval = float('inf')
+            for movimiento in self.posiciones_siguientes((self.contrario.simbolo, tablero)):
+                if not self.es_tiro_valido(tablero, movimiento):
+                    continue
+                tablero_simulado = self.simula_tiro(tablero, movimiento)
+                eval = self.minimax(tablero_simulado[1], depth - 1, True)
+                min_eval = min(min_eval, eval)
+            return min_eval
